@@ -3,36 +3,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, Calendar, Target, Brain, Award } from "lucide-react";
 import { ProgressChart } from "@/components/progress-chart";
-
-const MOCK_USER_ID = 1;
+import { useAuth } from "@/AuthContext";
 
 export default function Progress() {
+  const { user, loading } = useAuth();
   const { data: progressData } = useQuery({
-    queryKey: ["/api/progress", MOCK_USER_ID],
+    queryKey: ["/api/progress", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/progress/${MOCK_USER_ID}`);
+      if (!user) return null;
+      const response = await fetch(`/api/progress/${user.id}`);
       if (!response.ok) return null;
       return response.json();
-    }
+    },
+    enabled: !!user
   });
 
   const { data: moodData } = useQuery({
-    queryKey: ["/api/mood-entries", MOCK_USER_ID],
+    queryKey: ["/api/mood-entries", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/mood-entries/${MOCK_USER_ID}`);
+      if (!user) return { entries: [] };
+      const response = await fetch(`/api/mood-entries/${user.id}`);
       if (!response.ok) return { entries: [] };
       return response.json();
-    }
+    },
+    enabled: !!user
   });
 
   const { data: interventionData } = useQuery({
-    queryKey: ["/api/interventions", MOCK_USER_ID],
+    queryKey: ["/api/interventions", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/interventions/${MOCK_USER_ID}`);
+      if (!user) return { interventions: [] };
+      const response = await fetch(`/api/interventions/${user.id}`);
       if (!response.ok) return { interventions: [] };
       return response.json();
-    }
+    },
+    enabled: !!user
   });
+
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (!user) return <div className="p-8 text-center">Please log in or sign up.</div>;
 
   const progress = progressData?.progress;
   const insights = progressData?.insights;

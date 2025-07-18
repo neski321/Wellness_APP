@@ -44,6 +44,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Firebase Auth user sync
+  app.post("/api/users/firebase", async (req, res) => {
+    try {
+      const { firebaseUid, email, name } = req.body;
+      if (!firebaseUid) return res.status(400).json({ error: "Missing firebaseUid" });
+      // Try to find user by firebaseUid (store in email or a new field if needed)
+      let user = await storage.getUserByEmail(email);
+      if (!user) {
+        // Create new user
+        user = await storage.createUser({
+          name: name || "Firebase User",
+          email: email || `firebase_${firebaseUid}@example.com`,
+          firebaseUid,
+          isGuest: false
+        });
+      } else {
+        // Update user with firebaseUid if not set
+        if (!user.firebaseUid) {
+          user = await storage.updateUser(user.id, { firebaseUid });
+        }
+      }
+      res.json({ user: { id: user.id, name: user.name, email: user.email, isGuest: false, firebaseUid } });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Guest user creation
+  app.post("/api/users/guest", async (req, res) => {
+    try {
+      // Create a guest user (no email, random name)
+      const guestName = `Guest${Math.floor(Math.random() * 100000)}`;
+      const user = await storage.createUser({
+        name: guestName,
+        username: guestName,
+        password: Math.random().toString(36).slice(-8),
+        isGuest: true
+      });
+      res.json({ user: { id: user.id, name: user.name, isGuest: true } });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Delete user and all related data
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      await storage.deleteUserAndData(userId);
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Update user profile or password
+  app.patch("/api/users/:id", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.id);
+      const { name, email, username, password, oldPassword } = req.body;
+      // If password is being changed, require oldPassword and check it
+      if (password) {
+        const user = await storage.getUser(userId);
+        if (!user) return res.status(404).json({ error: "User not found" });
+        if (user.password && user.password !== oldPassword) {
+          return res.status(400).json({ error: "Old password is incorrect" });
+        }
+      }
+      const updates: any = {};
+      if (name) updates.name = name;
+      if (email) updates.email = email;
+      if (username) updates.username = username;
+      if (password) updates.password = password;
+      const updatedUser = await storage.updateUser(userId, updates);
+      res.json({ user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, username: updatedUser.username } });
+    } catch (error) {
+      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Mood tracking routes
   app.post("/api/mood-entries", async (req, res) => {
     try {

@@ -192,6 +192,16 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userProgress.userId, userId));
   }
 
+  async deleteUserAndData(userId: number): Promise<void> {
+    // Delete all related data
+    await db.delete(postComments).where(eq(postComments.userId, userId));
+    await db.delete(communityPosts).where(eq(communityPosts.userId, userId));
+    await db.delete(moodEntries).where(eq(moodEntries.userId, userId));
+    await db.delete(interventions).where(eq(interventions.userId, userId));
+    await db.delete(userProgress).where(eq(userProgress.userId, userId));
+    await db.delete(users).where(eq(users.id, userId));
+  }
+
   private async updateLastCheckIn(userId: number): Promise<void> {
     await db.update(userProgress)
       .set({ lastCheckIn: new Date(), updatedAt: new Date() })

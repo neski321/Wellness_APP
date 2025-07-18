@@ -5,12 +5,14 @@ import { z } from "zod";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  username: text("username").unique(),
+  email: text("email").unique(),
+  password: text("password"),
   name: text("name").notNull(),
   onboardingCompleted: boolean("onboarding_completed").default(false),
   createdAt: timestamp("created_at").defaultNow(),
+  firebaseUid: text("firebase_uid").unique(),
+  isGuest: boolean("is_guest").default(false),
 });
 
 export const moodEntries = pgTable("mood_entries", {
@@ -99,6 +101,10 @@ export const userProgressRelations = relations(userProgress, ({ one }) => ({
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
+}).extend({
+  username: z.string().optional(),
+  email: z.string().optional(),
+  password: z.string().optional(),
 });
 
 export const insertMoodEntrySchema = createInsertSchema(moodEntries).omit({

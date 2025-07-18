@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { 
   Settings as SettingsIcon, 
   Bell, 
@@ -17,20 +18,127 @@ import {
   Smartphone
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/AuthContext";
+import { apiRequest } from "@/lib/queryClient";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function Settings() {
   const { toast } = useToast();
+  const { user, loading, logout } = useAuth();
   const [notifications, setNotifications] = useState(true);
   const [dailyReminders, setDailyReminders] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [dataSharing, setDataSharing] = useState(false);
   const [biometricAuth, setBiometricAuth] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: user?.name || "", email: user?.email || "", username: user?.username || "" });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ oldPassword: "", newPassword: "" });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Demo auth actions
+  const handleDemoLogin = async () => {
+    try {
+      await login("demo@example.com", "demo123");
+      toast({ title: "Logged in as demo user" });
+    } catch (e: any) {
+      toast({ title: "Login failed", description: e.message, variant: "destructive" });
+    }
+  };
+  const handleDemoSignup = async () => {
+    try {
+      await signUp("demo@example.com", "demo123", "Demo User");
+      toast({ title: "Signed up as demo user" });
+    } catch (e: any) {
+      toast({ title: "Signup failed", description: e.message, variant: "destructive" });
+    }
+  };
+  const handleGoogleLogin = async () => {
+    try {
+      await loginWithGoogle();
+      toast({ title: "Logged in with Google" });
+    } catch (e: any) {
+      toast({ title: "Google login failed", description: e.message, variant: "destructive" });
+    }
+  };
+  const handleLogout = async () => {
+    await logout();
+    toast({ title: "Logged out" });
+  };
+  const handleGuest = async () => {
+    await signInAsGuest();
+    toast({ title: "Signed in as guest" });
+  };
 
   const handleToggle = (setting: string, value: boolean) => {
     toast({
       title: "Settings updated",
       description: `${setting} has been ${value ? "enabled" : "disabled"}.`,
     });
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteAccount = async () => {
+    if (!user) return;
+    setDeleting(true);
+    try {
+      await apiRequest("DELETE", `/api/users/${user.id}`);
+      toast({ title: "Account deleted" });
+      await logout();
+      setDeleteDialogOpen(false);
+    } catch (e: any) {
+      toast({ title: "Failed to delete account", description: e.message, variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleEditProfile = () => {
+    setProfileForm({ name: user?.name || "", email: user?.email || "", username: user?.username || "" });
+    setProfileError(null);
+    setEditProfileOpen(true);
+  };
+  const handleChangePassword = () => {
+    setPasswordForm({ oldPassword: "", newPassword: "" });
+    setPasswordError(null);
+    setChangePasswordOpen(true);
+  };
+  const submitEditProfile = async () => {
+    if (!user) return;
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const res = await apiRequest("PATCH", `/api/users/${user.id}`, profileForm);
+      toast({ title: "Profile updated" });
+      setEditProfileOpen(false);
+    } catch (e: any) {
+      setProfileError(e.message || "Failed to update profile");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+  const submitChangePassword = async () => {
+    if (!user) return;
+    setPasswordLoading(true);
+    setPasswordError(null);
+    try {
+      await apiRequest("PATCH", `/api/users/${user.id}`, { password: passwordForm.newPassword, oldPassword: passwordForm.oldPassword });
+      toast({ title: "Password changed" });
+      setChangePasswordOpen(false);
+    } catch (e: any) {
+      setPasswordError(e.message || "Failed to change password");
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const settingsSections = [
@@ -41,18 +149,23 @@ export default function Settings() {
         {
           title: "Profile Information",
           description: "Update your name, email, and other details",
-          action: "Edit"
+          action: "Edit",
+          onClick: !user?.isGuest ? handleEditProfile : undefined,
+          disabled: !!user?.isGuest
         },
         {
           title: "Change Password",
           description: "Update your account password",
-          action: "Change"
+          action: "Change",
+          onClick: !user?.isGuest ? handleChangePassword : undefined,
+          disabled: !!user?.isGuest
         },
         {
           title: "Delete Account",
           description: "Permanently delete your account and data",
           action: "Delete",
-          destructive: true
+          destructive: true,
+          onClick: handleDeleteAccount
         }
       ]
     },
@@ -145,7 +258,29 @@ export default function Settings() {
   ];
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-md mx-auto px-4 py-6 space-y-8">
+      <Card>
+        <CardHeader>
+          <CardTitle>Account</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {loading ? (
+            <div>Loading...</div>
+          ) : user ? (
+            <>
+              <div className="font-medium text-lg">
+                {user.isGuest ? "Guest User" : user.name || user.email}
+              </div>
+              {!user.isGuest && user.email && (
+                <div className="text-gray-500 text-sm">{user.email}</div>
+              )}
+              <Button onClick={logout} className="mt-2">Logout</Button>
+            </>
+          ) : (
+            <div>Please use the Login / Sign Up / Guest button in the header.</div>
+          )}
+        </CardContent>
+      </Card>
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Settings</h1>
         <p className="text-gray-600">Customize your MindEase experience</p>
@@ -176,11 +311,32 @@ export default function Settings() {
                     onCheckedChange={item.onChange}
                     className="ml-4"
                   />
+                ) : item.disabled ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span>
+                          <Button 
+                            variant={item.destructive ? "destructive" : "outline"}
+                            size="sm"
+                            className="ml-4"
+                            disabled
+                          >
+                            {item.action}
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <span>Sign up to access this feature</span>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 ) : (
                   <Button 
                     variant={item.destructive ? "destructive" : "outline"}
                     size="sm"
                     className="ml-4"
+                    onClick={item.onClick}
                   >
                     {item.action}
                   </Button>
@@ -244,6 +400,90 @@ export default function Settings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialog for account deletion confirmation */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Account</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 text-center">
+            <p className="text-red-600 font-semibold mb-2">This action is permanent!</p>
+            <p>Are you sure you want to permanently delete your account and all data? This cannot be undone.</p>
+          </div>
+          <DialogFooter className="flex flex-row gap-2 justify-center">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteAccount} disabled={deleting}>
+              {deleting ? "Deleting..." : "Delete Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Profile Dialog */}
+      <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {profileError && <div className="text-red-500 text-sm text-center">{profileError}</div>}
+            <Input
+              placeholder="Name"
+              value={profileForm.name}
+              onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
+              disabled={profileLoading}
+            />
+            <Input
+              placeholder="Email"
+              type="email"
+              value={profileForm.email}
+              onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))}
+              disabled={profileLoading}
+            />
+            <Input
+              placeholder="Username"
+              value={profileForm.username}
+              onChange={e => setProfileForm(f => ({ ...f, username: e.target.value }))}
+              disabled={profileLoading}
+            />
+          </div>
+          <DialogFooter className="flex flex-row gap-2 justify-center mt-4">
+            <Button variant="outline" onClick={() => setEditProfileOpen(false)} disabled={profileLoading}>Cancel</Button>
+            <Button onClick={submitEditProfile} disabled={profileLoading}>{profileLoading ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={changePasswordOpen} onOpenChange={setChangePasswordOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {passwordError && <div className="text-red-500 text-sm text-center">{passwordError}</div>}
+            <Input
+              placeholder="Old Password"
+              type="password"
+              value={passwordForm.oldPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, oldPassword: e.target.value }))}
+              disabled={passwordLoading}
+            />
+            <Input
+              placeholder="New Password"
+              type="password"
+              value={passwordForm.newPassword}
+              onChange={e => setPasswordForm(f => ({ ...f, newPassword: e.target.value }))}
+              disabled={passwordLoading}
+            />
+          </div>
+          <DialogFooter className="flex flex-row gap-2 justify-center mt-4">
+            <Button variant="outline" onClick={() => setChangePasswordOpen(false)} disabled={passwordLoading}>Cancel</Button>
+            <Button onClick={submitChangePassword} disabled={passwordLoading}>{passwordLoading ? "Saving..." : "Change Password"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

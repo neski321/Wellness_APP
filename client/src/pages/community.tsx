@@ -9,14 +9,19 @@ import { Label } from "@/components/ui/label";
 import { Users, Heart, MessageCircle, Send, Shield, Plus } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-const MOCK_USER_ID = 1;
+import { useAuth } from "@/AuthContext";
 
 export default function Community() {
   const { toast } = useToast();
+  const { user, loading } = useAuth();
   const [newPostContent, setNewPostContent] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(true);
   const [showPostForm, setShowPostForm] = useState(false);
+
+  // Custom event to open AuthModal from anywhere
+  const openAuthModal = () => {
+    window.dispatchEvent(new CustomEvent("open-auth-modal"));
+  };
 
   const { data: postsData, isLoading } = useQuery({
     queryKey: ["/api/community/posts"],
@@ -29,8 +34,9 @@ export default function Community() {
 
   const createPostMutation = useMutation({
     mutationFn: async (postData: { content: string; anonymous: boolean }) => {
+      if (!user) throw new Error("No user");
       const response = await apiRequest("POST", "/api/community/posts", {
-        userId: MOCK_USER_ID,
+        userId: user.id,
         content: postData.content,
         anonymous: postData.anonymous
       });
@@ -93,6 +99,21 @@ export default function Community() {
     if (diffInDays < 7) return `${diffInDays}d ago`;
     return date.toLocaleDateString();
   };
+
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (!user) return (
+    <div className="p-8 text-center">
+      <div className="mb-4">Please log in or sign up to access the community.</div>
+      <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={openAuthModal}>Login / Sign Up</button>
+    </div>
+  );
+  if (user.isGuest) return (
+    <div className="p-8 text-center">
+      <div className="mb-4">Guest users cannot access the community features.</div>
+      <div className="mb-4 text-gray-500">Sign up or log in to join the community and share your thoughts!</div>
+      <button className="px-4 py-2 bg-blue-600 text-white rounded" onClick={openAuthModal}>Login / Sign Up</button>
+    </div>
+  );
 
   return (
     <div className="max-w-md mx-auto px-4 py-6 space-y-6">

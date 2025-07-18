@@ -10,6 +10,10 @@ import Resources from "@/pages/resources";
 import Community from "@/pages/community";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
+import { AuthProvider, useAuth } from "./AuthContext";
+import { AuthModal } from "@/components/ui/auth-modal";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 function Router() {
   return (
@@ -26,12 +30,38 @@ function Router() {
 
 function App() {
   return (
+    <AuthProvider>
+      <InnerApp />
+    </AuthProvider>
+  );
+}
+
+function InnerApp() {
+  const { user, loading } = useAuth();
+  const [authOpen, setAuthOpen] = useState(false);
+
+  // Listen for custom event to open AuthModal from anywhere
+  useEffect(() => {
+    const handler = () => setAuthOpen(true);
+    window.addEventListener("open-auth-modal", handler);
+    return () => window.removeEventListener("open-auth-modal", handler);
+  }, []);
+
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <div className="min-h-screen bg-gray-50">
+          <header className="w-full flex justify-end p-2">
+            {!user && !loading && (
+              <Button onClick={() => setAuthOpen(true)} variant="outline">
+                Login / Sign Up / Guest
+              </Button>
+            )}
+          </header>
           <Router />
           <BottomNav />
           <Toaster />
+          <AuthModal open={authOpen || (!user && !loading)} onOpenChange={setAuthOpen} />
         </div>
       </TooltipProvider>
     </QueryClientProvider>

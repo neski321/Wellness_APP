@@ -13,12 +13,11 @@ import ThoughtCheckin from "@/components/thought-checkin";
 import QuickMeditation from "@/components/quick-meditation";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock user ID for demo - in real app this would come from auth
-const MOCK_USER_ID = 1;
+import { useAuth } from "@/AuthContext";
 
 export default function Home() {
   const { toast } = useToast();
+  const { user, loading } = useAuth();
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [showBreathingExercise, setShowBreathingExercise] = useState(false);
   const [showCrisisResources, setShowCrisisResources] = useState(false);
@@ -27,41 +26,47 @@ export default function Home() {
 
   // Fetch user data
   const { data: userData } = useQuery({
-    queryKey: ["/api/users", MOCK_USER_ID],
+    queryKey: ["/api/users", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/users/${MOCK_USER_ID}`);
+      if (!user) return null;
+      const response = await fetch(`/api/users/${user.id}`);
       if (!response.ok) {
         // Create user if not exists
         const createResponse = await apiRequest("POST", "/api/users", {
-          username: "demo_user",
-          email: "demo@example.com",
+          username: user.name || "demo_user",
+          email: user.email || "demo@example.com",
           password: "demo123",
-          name: "Sarah"
+          name: user.name || "Sarah"
         });
         return createResponse.json();
       }
       return response.json();
-    }
+    },
+    enabled: !!user
   });
 
   // Fetch user progress
   const { data: progressData } = useQuery({
-    queryKey: ["/api/progress", MOCK_USER_ID],
+    queryKey: ["/api/progress", user?.id],
     queryFn: async () => {
-      const response = await fetch(`/api/progress/${MOCK_USER_ID}`);
+      if (!user) return null;
+      const response = await fetch(`/api/progress/${user.id}`);
       if (!response.ok) return null;
       return response.json();
-    }
+    },
+    enabled: !!user
   });
 
   // Fetch weekly mood data
   const { data: weeklyMoodData } = useQuery({
-    queryKey: ["/api/mood-entries", MOCK_USER_ID, "weekly"],
+    queryKey: ["/api/mood-entries", user?.id, "weekly"],
     queryFn: async () => {
-      const response = await fetch(`/api/mood-entries/${MOCK_USER_ID}/weekly`);
+      if (!user) return { entries: [] };
+      const response = await fetch(`/api/mood-entries/${user.id}/weekly`);
       if (!response.ok) return { entries: [] };
       return response.json();
-    }
+    },
+    enabled: !!user
   });
 
   // Fetch community posts
@@ -77,8 +82,9 @@ export default function Home() {
   // Mood tracking mutation
   const moodMutation = useMutation({
     mutationFn: async (moodData: { mood: string; intensity: number; note?: string }) => {
+      if (!user) throw new Error("No user");
       const response = await apiRequest("POST", "/api/mood-entries", {
-        userId: MOCK_USER_ID,
+        userId: user.id,
         ...moodData
       });
       return response.json();
@@ -86,7 +92,6 @@ export default function Home() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/mood-entries"] });
       queryClient.invalidateQueries({ queryKey: ["/api/progress"] });
-      
       if (data.recommendation) {
         toast({
           title: "Mood logged successfully!",
@@ -108,7 +113,10 @@ export default function Home() {
     moodMutation.mutate({ mood, intensity });
   };
 
-  const userName = userData?.user?.name || "there";
+  if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (!user) return <div className="p-8 text-center">Please log in or sign up.</div>;
+
+  const userName = userData?.user?.name || user.name || "there";
   const streak = progressData?.progress?.streak || 0;
 
   return (

@@ -32,3 +32,10 @@ yarn-debug.log*
 yarn-error.log*
 # Misc
 coverage/
+migrations/0001_calm_rhodey.sql
+.gitignore
+migrations/meta/0000_snapshot.json
+migrations/meta/0001_snapshot.json
+migrations/meta/_journal.json
+.gitignore
+migrations/0000_redundant_legion.sql
