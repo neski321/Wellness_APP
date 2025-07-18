@@ -17,7 +17,7 @@ export const users = pgTable("users", {
 
 export const moodEntries = pgTable("mood_entries", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   mood: text("mood").notNull(), // joy, calm, neutral, stressed, anxious
   intensity: integer("intensity").notNull(), // 1-5 scale
   note: text("note"),
@@ -26,7 +26,7 @@ export const moodEntries = pgTable("mood_entries", {
 
 export const interventions = pgTable("interventions", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   type: text("type").notNull(), // breathing, cbt, meditation, custom
   title: text("title").notNull(),
   content: text("content").notNull(),
@@ -38,7 +38,7 @@ export const interventions = pgTable("interventions", {
 
 export const communityPosts = pgTable("community_posts", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   content: text("content").notNull(),
   anonymous: boolean("anonymous").default(true),
   likes: integer("likes").default(0),
@@ -48,8 +48,8 @@ export const communityPosts = pgTable("community_posts", {
 
 export const postComments = pgTable("post_comments", {
   id: serial("id").primaryKey(),
-  postId: integer("post_id").references(() => communityPosts.id).notNull(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  postId: integer("post_id").references(() => communityPosts.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   content: text("content").notNull(),
   anonymous: boolean("anonymous").default(true),
   createdAt: timestamp("created_at").defaultNow(),
@@ -57,7 +57,7 @@ export const postComments = pgTable("post_comments", {
 
 export const userProgress = pgTable("user_progress", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id).notNull(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   streak: integer("streak").default(0),
   totalInterventions: integer("total_interventions").default(0),
   lastCheckIn: timestamp("last_check_in"),

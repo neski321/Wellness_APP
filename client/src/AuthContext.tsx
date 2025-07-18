@@ -7,6 +7,7 @@ import {
   onAuthStateChanged,
   signOut,
   User as FirebaseUser,
+  updateProfile,
 } from "firebase/auth";
 
 interface User {
@@ -95,7 +96,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUp = async (email: string, password: string, name?: string) => {
     setLoading(true);
     const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await cred.user.updateProfile({ displayName: name });
+    if (name) {
+      await updateProfile(cred.user, { displayName: name });
+      await cred.user.reload();
+    }
+    console.log("[SignUp] Sending to backend:", { uid: cred.user.uid, email, name });
+    // Always use the name from the form
     const syncedUser = await fetchOrCreateUser(cred.user.uid, email, name);
     setUser(syncedUser);
     setLoading(false);

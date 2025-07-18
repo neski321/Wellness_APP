@@ -20,8 +20,9 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { auth } from "@/lib/firebase";
 
 export default function Settings() {
   const { toast } = useToast();
@@ -91,7 +92,28 @@ export default function Settings() {
     if (!user) return;
     setDeleting(true);
     try {
+      // 1. Delete from backend first
       await apiRequest("DELETE", `/api/users/${user.id}`);
+      // 2. Then delete from Firebase
+      if (auth.currentUser) {
+        try {
+          await auth.currentUser.delete();
+        } catch (firebaseError: any) {
+          if (firebaseError.code === "auth/requires-recent-login") {
+            toast({
+              title: "Please log in again to delete your account from Firebase.",
+              description: "For security, please log out and log back in, then try deleting your account again.",
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: "Failed to delete Firebase account",
+              description: firebaseError.message,
+              variant: "destructive"
+            });
+          }
+        }
+      }
       toast({ title: "Account deleted" });
       await logout();
       setDeleteDialogOpen(false);
@@ -406,6 +428,9 @@ export default function Settings() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Account</DialogTitle>
+            <DialogDescription>
+              This action is permanent and will remove all your data from MindPulse.
+            </DialogDescription>
           </DialogHeader>
           <div className="py-2 text-center">
             <p className="text-red-600 font-semibold mb-2">This action is permanent!</p>
@@ -425,6 +450,9 @@ export default function Settings() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Profile</DialogTitle>
+            <DialogDescription>
+              Update your name, email, or username for your account.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {profileError && <div className="text-red-500 text-sm text-center">{profileError}</div>}
@@ -460,6 +488,9 @@ export default function Settings() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>
+              Enter your old password and a new password to update your account security.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {passwordError && <div className="text-red-500 text-sm text-center">{passwordError}</div>}

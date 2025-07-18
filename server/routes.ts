@@ -49,12 +49,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { firebaseUid, email, name } = req.body;
       if (!firebaseUid) return res.status(400).json({ error: "Missing firebaseUid" });
-      // Try to find user by firebaseUid (store in email or a new field if needed)
       let user = await storage.getUserByEmail(email);
       if (!user) {
         // Create new user
+        const trimmedName = typeof name === 'string' ? name.trim() : '';
+        const displayName = trimmedName !== '' ? trimmedName : email ? email.split("@")[0] : "Firebase User";
         user = await storage.createUser({
-          name: name || "Firebase User",
+          name: displayName,
+          username: displayName,
           email: email || `firebase_${firebaseUid}@example.com`,
           firebaseUid,
           isGuest: false
@@ -65,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user = await storage.updateUser(user.id, { firebaseUid });
         }
       }
-      res.json({ user: { id: user.id, name: user.name, email: user.email, isGuest: false, firebaseUid } });
+      res.json({ user: { id: user.id, name: user.name, username: user.username, email: user.email, isGuest: false, firebaseUid } });
     } catch (error) {
       res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
@@ -92,9 +94,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/users/:id", async (req, res) => {
     try {
       const userId = parseInt(req.params.id);
+      console.log("[Delete User] Attempting to delete user:", userId);
       await storage.deleteUserAndData(userId);
+      const deleted = await storage.getUser(userId);
+      if (deleted) {
+        console.error("[Delete User] User still exists after delete:", deleted);
+        return res.status(500).json({ error: "User was not deleted from database." });
+      }
+      console.log("[Delete User] User deleted successfully:", userId);
       res.json({ success: true });
     } catch (error) {
+      console.error("[Delete User] Error:", error);
       res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });

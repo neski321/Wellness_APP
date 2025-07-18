@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/AuthContext";
@@ -29,8 +29,12 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
   const handleSignup = async () => {
     setError(null);
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
     try {
-      await signUp(email, password, name);
+      await signUp(email, password, name.trim());
       onOpenChange(false);
     } catch (e: any) {
       setError(e.message || "Signup failed");
@@ -64,6 +68,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <DialogTitle className="text-center">
             {mode === "login" ? "Login to MindPulse" : "Sign Up for MindPulse"}
           </DialogTitle>
+          <DialogDescription>
+            {mode === "login"
+              ? "Enter your email and password to log in."
+              : "Enter your name, email, and password to create a new account."}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4">
           {error && <div className="text-red-500 text-sm text-center">{error}</div>}
