@@ -9,6 +9,7 @@ import { SettingsIcon, Bell, Moon, Shield, Heart, HelpCircle, Mail, User, Sparkl
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/AuthContext"
 import { apiRequest } from "@/lib/queryClient"
+import { CrisisResources } from "@/components/crisis-resources"
 import {
   Dialog,
   DialogContent,
@@ -76,6 +77,7 @@ export default function Settings() {
   const [deleting, setDeleting] = useState(false)
   const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
+  const [showCrisisResources, setShowCrisisResources] = useState(false)
   const [profileForm, setProfileForm] = useState({
     name: user?.name || "",
     email: user?.email || "",
@@ -285,24 +287,39 @@ export default function Settings() {
       description: "Find answers to common questions",
       icon: <HelpCircle className="w-5 h-5 text-blue-500" />,
       color: "from-blue-50 to-cyan-50",
+      onClick: () => {
+        // TODO: Implement help center
+        toast({
+          title: "Help Center",
+          description: "Help center coming soon!",
+        })
+      },
     },
     {
       title: "Contact Support",
       description: "Get help from our support team",
       icon: <Mail className="w-5 h-5 text-green-500" />,
       color: "from-green-50 to-emerald-50",
+      onClick: () => {
+        // TODO: Implement contact support
+        toast({
+          title: "Contact Support",
+          description: "Contact support coming soon!",
+        })
+      },
     },
     {
       title: "Crisis Resources",
       description: "Access emergency mental health support",
       icon: <Phone className="w-5 h-5 text-red-500" />,
       color: "from-red-50 to-pink-50",
+      onClick: () => setShowCrisisResources(true),
     },
   ]
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -323,7 +340,7 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen">
       <motion.div
         variants={containerVariants}
         initial="hidden"
@@ -481,25 +498,26 @@ export default function Settings() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {supportItems.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  whileHover={{ scale: 1.02, x: 4 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`flex items-center space-x-4 p-4 bg-gradient-to-r ${item.color} rounded-2xl border border-gray-200 hover:shadow-md transition-all duration-300 cursor-pointer`}
-                >
-                  <div className="w-12 h-12 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-md">
-                    {item.icon}
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900">{item.title}</h4>
-                    <p className="text-sm text-gray-600">{item.description}</p>
-                  </div>
-                </motion.div>
-              ))}
+                             {supportItems.map((item, index) => (
+                 <motion.div
+                   key={index}
+                   initial={{ opacity: 0, x: -20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   transition={{ delay: index * 0.1 }}
+                   whileHover={{ scale: 1.02, x: 4 }}
+                   whileTap={{ scale: 0.98 }}
+                   className={`flex items-center space-x-4 p-4 bg-gradient-to-r ${item.color} rounded-2xl border border-gray-200 hover:shadow-md transition-all duration-300 cursor-pointer`}
+                   onClick={item.onClick}
+                 >
+                   <div className="w-12 h-12 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-md">
+                     {item.icon}
+                   </div>
+                   <div className="flex-1">
+                     <h4 className="font-bold text-gray-900">{item.title}</h4>
+                     <p className="text-sm text-gray-600">{item.description}</p>
+                   </div>
+                 </motion.div>
+               ))}
             </CardContent>
           </Card>
         </motion.div>
@@ -675,9 +693,14 @@ export default function Settings() {
                 {passwordLoading ? "Saving..." : "Change Password"}
               </Button>
             </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
-    </div>
-  )
-}
+                     </DialogContent>
+         </Dialog>
+
+         {/* Crisis Resources Modal */}
+         {showCrisisResources && (
+           <CrisisResources onClose={() => setShowCrisisResources(false)} />
+         )}
+       </motion.div>
+     </div>
+   )
+ }

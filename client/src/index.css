@@ -67,6 +67,16 @@
   body {
     @apply font-sans antialiased bg-background text-foreground;
     padding-bottom: 80px; /* Space for bottom navigation */
+    /* Enhanced background for mental health app */
+    background: linear-gradient(
+      135deg,
+      hsl(207, 90%, 97%) 0%,
+      hsl(220, 70%, 96%) 25%,
+      hsl(269, 60%, 96%) 50%,
+      hsl(207, 90%, 97%) 100%
+    );
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 
   /* Gentle animations for mental health app */
@@ -75,8 +85,13 @@
   }
 
   @keyframes breathe {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.1); }
+    0%,
+    100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
   }
 
   .mood-gradient-joy {
@@ -146,7 +161,8 @@
   }
 
   @keyframes pulseGentle {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
       opacity: 1;
     }
@@ -161,11 +177,50 @@
   }
 
   @keyframes breathing {
-    0%, 100% {
+    0%,
+    100% {
       transform: scale(1);
     }
     50% {
       transform: scale(1.2);
     }
+  }
+
+  /* Background animation enhancements */
+  .bg-animated {
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  /* Floating animation for background elements */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+
+  /* Subtle glow effect */
+  .glow {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
   }
 }
