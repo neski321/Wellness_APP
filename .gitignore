@@ -41,3 +41,4 @@ migrations/meta/_journal.json
 migrations/0000_redundant_legion.sql
 migrations/meta/0002_snapshot.json
 migrations/0002_cute_reavers.sql
+env.example
